@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GELA - login</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="tela-login">
+  <form method="POST" class="caixa-login">
+    <h1>GELA</h1>
+    <p class="subtitulo">Gerenciador de literatura acadêmica</p>
+    {% if erro %}<p class="erro">{{ erro }}</p>{% endif %}
+    <input type="password" name="senha" placeholder="Senha de acesso" autofocus required>
+    <button type="submit">Entrar</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GELA</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topo">
+  <h1>GELA</h1>
+  <a href="{{ url_for('logout') }}">Sair</a>
+</header>
+
+<main>
+  <section class="painel-busca">
+    <h2>Nova busca</h2>
+    <div class="campo">
+      <label>Termos obrigatórios (todos devem aparecer) - um por linha</label>
+      <textarea id="termos-obrigatorios" rows="2" placeholder="biomecânica&#10;corrida"></textarea>
+    </div>
+    <div class="campo">
+      <label>Termos alternativos (basta um aparecer) - um por linha, opcional</label>
+      <textarea id="termos-qualquer" rows="2" placeholder="lesão&#10;impacto"></textarea>
+    </div>
+    <div class="campo-linha">
+      <div class="campo">
+        <label>Ano inicial</label>
+        <input type="number" id="ano-inicio" placeholder="2020">
+      </div>
+      <div class="campo">
+        <label>Ano final</label>
+        <input type="number" id="ano-fim" placeholder="2026">
+      </div>
+    </div>
+    <button id="btn-buscar">Buscar</button>
+    <p id="status-busca"></p>
+    <div id="strings-busca" class="strings-busca" hidden>
+      <p><strong>String usada no OpenAlex:</strong> <code id="str-oa"></code></p>
+      <p><strong>String usada no SciELO:</strong> <code id="str-sc"></code></p>
+      <p><strong>String usada no PhilPapers:</strong> <code id="str-pp"></code></p>
+    </div>
+  </section>
+
+  <section id="exportacoes" class="painel-export" hidden>
+    <h2>Exportar</h2>
+    <div id="links-export"></div>
+  </section>
+
+  <section id="resultados" class="painel-resultados"></section>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
