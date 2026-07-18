@@ -82,12 +82,13 @@ def api_buscar():
         avisos.append(f"OpenAlex: {e}")
         total_oa = 0
 
-    try:
-        res_sc, total_sc = scielo.buscar(query_sc, ano_inicio, ano_fim)
-        todos_artigos += res_sc
-    except RuntimeError as e:
-        avisos.append(f"SciELO: {e}")
-        total_sc = 0
+    res_sc, total_sc = scielo.buscar(query_sc, ano_inicio, ano_fim)
+    todos_artigos += res_sc
+    if getattr(scielo, "PENDENTE", False):
+        avisos.append(
+            "SciELO: busca por palavra-chave livre não é possível via API oficial "
+            "(ver clients/scielo.py para os detalhes e as opções de próximo passo)."
+        )
 
     res_pp, total_pp = philpapers.buscar(query_pp, ano_inicio, ano_fim)
     if getattr(philpapers, "PENDENTE", False):
