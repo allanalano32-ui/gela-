@@ -84,7 +84,7 @@ def api_buscar():
     try:
         res_oa, total_oa = openalex.buscar(query_oa, ano_inicio, ano_fim)
         todos_artigos += res_oa
-    except RuntimeError as e:
+    except Exception as e:
         avisos.append(f"OpenAlex: {e}")
         total_oa = 0
 
@@ -106,14 +106,14 @@ def api_buscar():
     try:
         res_bvs, total_bvs = bvs.buscar(query_bvs, ano_inicio, ano_fim)
         todos_artigos += res_bvs
-    except RuntimeError as e:
+    except Exception as e:
         avisos.append(f"BVS: {e}")
         total_bvs = 0
 
     try:
         res_gs, total_gs = google_scholar.buscar(query_gs, ano_inicio, ano_fim)
         todos_artigos += res_gs
-    except RuntimeError as e:
+    except Exception as e:
         avisos.append(f"Google Scholar: {e}")
         total_gs = 0
 
