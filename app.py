@@ -110,12 +110,15 @@ def api_buscar():
         avisos.append(f"BVS: {e}")
         total_bvs = 0
 
-    try:
-        res_gs, total_gs = google_scholar.buscar(query_gs, ano_inicio, ano_fim)
-        todos_artigos += res_gs
-    except Exception as e:
-        avisos.append(f"Google Scholar: {e}")
-        total_gs = 0
+    res_gs, total_gs = google_scholar.buscar(query_gs, ano_inicio, ano_fim)
+    todos_artigos += res_gs
+    if getattr(google_scholar, "PENDENTE", False):
+        avisos.append(
+            "Google Scholar: integração desativada após confirmar em produção que o "
+            "Google bloqueia (403) o IP de datacenter do Vercel, e a lib trava em "
+            "retry interno por ~95s (ver clients/google_scholar.py para o diagnóstico "
+            "completo e as opções de próximo passo)."
+        )
 
     resumo_dedup = db.salvar_artigos(busca_id, todos_artigos)
 
