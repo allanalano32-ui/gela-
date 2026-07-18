@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>GELA - Revisão</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topo">
+  <h1>GELA</h1>
+  <nav class="abas">
+    <a href="{{ url_for('index') }}">Busca</a>
+    <a href="{{ url_for('revisao') }}" class="aba-ativa">Revisão</a>
+  </nav>
+  <a href="{{ url_for('logout') }}">Sair</a>
+</header>
+
+<main>
+  <section class="painel-busca">
+    <h2>Corrigir referências</h2>
+    <p class="descricao-revisao">Verifica a lista de referências contra um padrão de citação. Checagem estrutural (heurística), não é reescrita automática.</p>
+    <div class="campo" style="margin-top:16px;">
+      <label>Arquivo (.docx ou .pdf)</label>
+      <input type="file" id="arquivo-correcao" accept=".docx,.pdf">
+    </div>
+    <div class="botoes-estilo">
+      <button id="btn-corrigir-abnt">ABNT</button>
+      <button disabled title="Aguardando documento normativo de Vancouver">Vancouver (pendente)</button>
+      <button disabled title="Aguardando documento normativo de APA">APA (pendente)</button>
+    </div>
+    <p id="status-correcao"></p>
+  </section>
+
+  <section id="resultado-correcao"></section>
+
+  <section class="painel-busca">
+    <h2>Revisão do trabalho</h2>
+    <p class="descricao-revisao">
+      Envie o arquivo (.docx ou .pdf). Por enquanto, o sistema verifica as
+      <strong>referências</strong> contra a base real do OpenAlex.
+    </p>
+    <div class="aviso-fonte">
+      Pendente por enquanto (aguardando definições): detecção de plágio e de
+      linguagem gerada por IA, sugestões de humanização da escrita. A checagem
+      estrutural ABNT já está disponível na seção "Corrigir referências" acima.
+    </div>
+
+    <div class="campo" style="margin-top:16px;">
+      <label>Arquivo (.docx ou .pdf)</label>
+      <input type="file" id="arquivo-revisao" accept=".docx,.pdf">
+    </div>
+    <button id="btn-enviar-revisao">Analisar referências</button>
+    <p id="status-revisao"></p>
+  </section>
+
+  <section id="resultado-revisao"></section>
+</main>
+
+<script src="{{ url_for('static', filename='revisao.js') }}"></script>
+<script src="{{ url_for('static', filename='correcao.js') }}"></script>
+</body>
+</html>

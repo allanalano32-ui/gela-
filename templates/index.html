@@ -11,6 +11,11 @@
   <a href="{{ url_for('logout') }}">Sair</a>
 </header>
 
+<nav class="abas">
+  <a href="{{ url_for('index') }}" class="aba-ativa">Busca</a>
+  <a href="{{ url_for('revisao') }}">Revisão</a>
+</nav>
+
 <main>
   <section class="painel-busca">
     <h2>Nova busca</h2>
@@ -37,6 +42,8 @@
     <div id="strings-busca" class="strings-busca" hidden>
       <p><strong>String usada no OpenAlex:</strong> <code id="str-oa"></code></p>
       <p><strong>String usada no SciELO:</strong> <code id="str-sc"></code></p>
+      <p><strong>String usada na BVS/LILACS:</strong> <code id="str-bvs"></code></p>
+      <p><strong>String usada no Google Scholar:</strong> <code id="str-gs"></code></p>
       <p><strong>String usada no PhilPapers:</strong> <code id="str-pp"></code></p>
     </div>
   </section>

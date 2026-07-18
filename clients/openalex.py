@@ -117,3 +117,48 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, per_page=25, max_resulta
 
     total_disponivel = data.get("meta", {}).get("count", len(resultados))
     return resultados, total_disponivel
+
+
+def buscar_melhor_correspondencia(texto_referencia, top_n=3):
+    """
+    Busca no OpenAlex os artigos mais prováveis de corresponder a uma referência
+    específica (usado na verificação de referências, não na busca principal).
+    Usa o texto da referência inteira como consulta de relevância (não booleana).
+
+    Retorna uma lista de até `top_n` candidatos normalizados (mesmo formato de
+    `buscar`), ordenados por relevância segundo o próprio OpenAlex.
+    """
+    api_key = os.environ.get("OPENALEX_API_KEY", "").strip()
+    email = os.environ.get("OPENALEX_EMAIL", "").strip()
+
+    params = {"search": texto_referencia, "per_page": top_n}
+    if api_key:
+        params["api_key"] = api_key
+    if email:
+        params["mailto"] = email
+
+    resp = requests.get(BASE_URL, params=params, timeout=20)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Erro na API do OpenAlex ({resp.status_code}): {resp.text[:300]}")
+
+    data = resp.json()
+    candidatos = []
+    for w in data.get("results", []):
+        autores = "; ".join(
+            a.get("author", {}).get("display_name", "")
+            for a in w.get("authorships", [])
+            if a.get("author")
+        )
+        fonte_local = (w.get("primary_location") or {}).get("source") or {}
+        doi = w.get("doi")
+        if doi:
+            doi = doi.replace("https://doi.org/", "").lower()
+        candidatos.append({
+            "titulo": w.get("title") or "(sem título)",
+            "ano": w.get("publication_year"),
+            "revista": fonte_local.get("display_name"),
+            "autores": autores,
+            "doi": doi,
+            "url": w.get("id"),
+        })
+    return candidatos

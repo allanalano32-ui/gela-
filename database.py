@@ -27,8 +27,13 @@ CREATE TABLE IF NOT EXISTS buscas (
     string_openalex TEXT,
     string_scielo TEXT,
     string_philpapers TEXT,
+    string_bvs TEXT,
+    string_google_scholar TEXT,
     data_execucao TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_bvs TEXT;
+ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_google_scholar TEXT;
 
 CREATE TABLE IF NOT EXISTS artigos (
     id TEXT PRIMARY KEY,           -- identificador único: doi normalizado OU id nativo da fonte
@@ -96,13 +101,16 @@ def _cursor(conn):
         cur.close()
 
 
-def criar_busca(termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers):
+def criar_busca(termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers,
+                 string_bvs=None, string_google_scholar=None):
     with get_conn() as conn:
         with _cursor(conn) as cur:
             cur.execute(
-                """INSERT INTO buscas (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers)
-                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers),
+                """INSERT INTO buscas (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo,
+                                        string_philpapers, string_bvs, string_google_scholar)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo,
+                 string_philpapers, string_bvs, string_google_scholar),
             )
             return cur.fetchone()["id"]
 

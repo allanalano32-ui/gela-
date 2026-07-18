@@ -51,3 +51,16 @@ main { max-width: 900px; margin: 0 auto; padding: 24px; }
 .badge-duplicata { font-size: 11px; color: var(--excluido); }
 
 #links-export a { display: inline-block; margin-right: 12px; font-size: 13px; }
+
+.abas { display: flex; gap: 16px; }
+.abas a { color: var(--muted); text-decoration: none; font-size: 14px; padding-bottom: 2px; }
+.abas a.aba-ativa { color: var(--accent); border-bottom: 2px solid var(--accent); font-weight: 500; }
+.descricao-revisao { color: var(--muted); font-size: 13px; }
+
+.status-confirmada { color: var(--incluido); font-weight: 500; font-size: 13px; }
+.status-possivel { color: var(--aviso); font-weight: 500; font-size: 13px; }
+.status-naoencontrada { color: var(--excluido); font-weight: 500; font-size: 13px; }
+.status-erro { color: var(--excluido); font-style: italic; font-size: 13px; }
+.botoes-estilo { display: flex; gap: 10px; margin-top: 10px; }
+.botoes-estilo button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: var(--accent); color: white; cursor: pointer; }
+.botoes-estilo button:disabled { background: #e5e2d8; color: var(--muted); cursor: not-allowed; }

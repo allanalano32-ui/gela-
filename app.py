@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 
 import database as db
 import export as exp
-from clients import openalex, scielo, philpapers
+from clients import openalex, scielo, philpapers, bvs, google_scholar
+from revisao.extrair_texto import extrair_texto, separar_corpo_e_referencias, extrair_paragrafos_com_formatacao
+from revisao.verificar_referencias import verificar_lista_referencias
+from correcao.abnt import verificar_lista_referencias_abnt
 
 load_dotenv()
 
@@ -65,11 +68,14 @@ def api_buscar():
     query_oa = openalex.montar_query_booleana(termos_obrigatorios, termos_qualquer)
     query_sc = scielo.montar_query_booleana(termos_obrigatorios, termos_qualquer)
     query_pp = philpapers.montar_query_booleana(termos_obrigatorios, termos_qualquer)
+    query_bvs = bvs.montar_query_booleana(termos_obrigatorios, termos_qualquer)
+    query_gs = google_scholar.montar_query_booleana(termos_obrigatorios, termos_qualquer)
 
     busca_id = db.criar_busca(
         termo_busca=" ".join(termos_obrigatorios),
         ano_inicio=ano_inicio, ano_fim=ano_fim,
         string_openalex=query_oa, string_scielo=query_sc, string_philpapers=query_pp,
+        string_bvs=query_bvs, string_google_scholar=query_gs,
     )
 
     avisos = []
@@ -97,6 +103,20 @@ def api_buscar():
             "equipe do PhilPapers conforme os termos deles - ver clients/philpapers.py)."
         )
 
+    try:
+        res_bvs, total_bvs = bvs.buscar(query_bvs, ano_inicio, ano_fim)
+        todos_artigos += res_bvs
+    except RuntimeError as e:
+        avisos.append(f"BVS: {e}")
+        total_bvs = 0
+
+    try:
+        res_gs, total_gs = google_scholar.buscar(query_gs, ano_inicio, ano_fim)
+        todos_artigos += res_gs
+    except RuntimeError as e:
+        avisos.append(f"Google Scholar: {e}")
+        total_gs = 0
+
     resumo_dedup = db.salvar_artigos(busca_id, todos_artigos)
 
     return jsonify({
@@ -105,11 +125,15 @@ def api_buscar():
             "openalex": total_oa,
             "scielo": total_sc,
             "philpapers": total_pp,
+            "bvs": total_bvs,
+            "google_scholar": total_gs,
         },
         "strings_busca": {
             "openalex": query_oa,
             "scielo": query_sc,
             "philpapers": query_pp,
+            "bvs": query_bvs,
+            "google_scholar": query_gs,
         },
         "resumo_dedup": resumo_dedup,
         "avisos": avisos,
@@ -163,6 +187,105 @@ def exportar_notebooklm(busca_id):
     conteudo = exp.gerar_consolidado_notebooklm(busca_id)
     return Response(conteudo, mimetype="text/markdown",
                      headers={"Content-Disposition": f"attachment; filename=notebooklm-{busca_id}.md"})
+
+
+@app.route("/revisao")
+@login_obrigatorio
+def revisao():
+    return render_template("revisao.html")
+
+
+@app.route("/api/revisao/upload", methods=["POST"])
+@login_obrigatorio
+def api_revisao_upload():
+    if "arquivo" not in request.files:
+        return jsonify({"erro": "Nenhum arquivo enviado."}), 400
+
+    arquivo = request.files["arquivo"]
+    if not arquivo.filename:
+        return jsonify({"erro": "Nenhum arquivo selecionado."}), 400
+
+    try:
+        conteudo_bytes = arquivo.read()
+        linhas = extrair_texto(arquivo.filename, conteudo_bytes)
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+
+    corpo, lista_referencias, encontrou_cabecalho = separar_corpo_e_referencias(
+        linhas, linhas_sao_paragrafos=arquivo.filename.lower().endswith(".docx")
+    )
+
+    resposta = {
+        "nome_arquivo": arquivo.filename,
+        "total_linhas_corpo": len(corpo),
+        "cabecalho_referencias_encontrado": encontrou_cabecalho,
+        "total_referencias_detectadas": len(lista_referencias),
+    }
+
+    if not encontrou_cabecalho:
+        resposta["aviso"] = (
+            "Não foi possível localizar uma seção de referências reconhecível "
+            "(procurei por um cabeçalho como 'REFERÊNCIAS' ou 'REFERÊNCIAS BIBLIOGRÁFICAS'). "
+            "Nenhuma referência foi verificada."
+        )
+        resposta["referencias_verificadas"] = []
+        return jsonify(resposta)
+
+    resposta["referencias_verificadas"] = verificar_lista_referencias(lista_referencias)
+    return jsonify(resposta)
+
+
+@app.route("/api/correcao/abnt", methods=["POST"])
+@login_obrigatorio
+def api_correcao_abnt():
+    """
+    Verifica a lista de referências de um arquivo contra o padrão estrutural
+    da ABNT NBR 6023. Checagem heurística (não é reescrita automática).
+    """
+    if "arquivo" not in request.files:
+        return jsonify({"erro": "Nenhum arquivo enviado."}), 400
+
+    arquivo = request.files["arquivo"]
+    if not arquivo.filename:
+        return jsonify({"erro": "Nenhum arquivo selecionado."}), 400
+
+    eh_docx = arquivo.filename.lower().endswith(".docx")
+    try:
+        conteudo_bytes = arquivo.read()
+        paragrafos = extrair_paragrafos_com_formatacao(arquivo.filename, conteudo_bytes)
+    except ValueError as e:
+        return jsonify({"erro": str(e)}), 400
+
+    linhas = [p["texto"] for p in paragrafos]
+    corpo, referencias_texto, encontrou_cabecalho = separar_corpo_e_referencias(
+        linhas, linhas_sao_paragrafos=eh_docx
+    )
+
+    if not encontrou_cabecalho:
+        return jsonify({
+            "aviso": "Não foi possível localizar uma seção de referências reconhecível.",
+            "resultado": [],
+        })
+
+    # localizar os parágrafos com formatação correspondentes à seção de referências:
+    # o corpo tem N linhas, seguido do cabeçalho (1 linha), seguido das referências
+    paragrafos_referencias = paragrafos[len(corpo) + 1:]
+
+    resultado = verificar_lista_referencias_abnt(paragrafos_referencias)
+
+    avisos_gerais = []
+    if not eh_docx:
+        avisos_gerais.append(
+            "Este arquivo é um PDF: não foi possível verificar negrito/itálico dos títulos "
+            "(essa informação não é preservada na extração de PDF). Recomendo enviar o .docx "
+            "original se quiser essa checagem completa."
+        )
+
+    return jsonify({
+        "nome_arquivo": arquivo.filename,
+        "avisos_gerais": avisos_gerais,
+        "resultado": resultado,
+    })
 
 
 if __name__ == "__main__":
