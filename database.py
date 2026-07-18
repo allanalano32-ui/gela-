@@ -96,13 +96,13 @@ def _cursor(conn):
         cur.close()
 
 
-def criar_busca(termo, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers):
+def criar_busca(termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers):
     with get_conn() as conn:
         with _cursor(conn) as cur:
             cur.execute(
                 """INSERT INTO buscas (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers)
                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                (termo, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers),
+                (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers),
             )
             return cur.fetchone()["id"]
 

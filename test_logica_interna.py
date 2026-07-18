@@ -53,8 +53,9 @@ try:
     db.init_db()
 
     busca_id = db.criar_busca(
-        "teste biomecânica", 2020, 2026,
-        "biomechanics AND running", "biomechanics AND running", None
+        termo_busca="teste biomecânica", ano_inicio=2020, ano_fim=2026,
+        string_openalex="biomechanics AND running", string_scielo="biomechanics AND running",
+        string_philpapers=None,
     )
 
     artigos_simulados = [
