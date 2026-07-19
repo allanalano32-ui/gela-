@@ -4,9 +4,20 @@ Cliente para o Semantic Scholar, usando a biblioteca `semanticscholar`
 
 Sem chave de API o limite de requisições é compartilhado e mais baixo; com uma
 chave gratuita (obtida em semanticscholar.org/product/api), o limite é maior.
+
+Testado ao vivo em produção: sem chave, a segunda página de paginação retornou
+HTTP 429 (rate limit) já na primeira busca real. A lib `semanticscholar` tem
+`retry=True` por padrão (via tenacity), o que significa que iterar o objeto de
+busca além da primeira página pode disparar retries internos com backoff que
+o código chamador não controla - o mesmo tipo de problema estrutural já visto
+no cliente do Google Scholar. Por isso aqui: `retry=False` explícito, timeout
+curto, e o limite é sempre travado a no máximo o tamanho de uma página (100,
+limite da própria API) para nunca precisar de uma segunda chamada HTTP.
 """
 
 from semanticscholar import SemanticScholar
+
+TIMEOUT_SEGUNDOS = 10
 
 _cliente = None
 
@@ -14,7 +25,7 @@ _cliente = None
 def _obter_cliente(api_key=None):
     global _cliente
     if _cliente is None:
-        _cliente = SemanticScholar(api_key=api_key)
+        _cliente = SemanticScholar(api_key=api_key, timeout=TIMEOUT_SEGUNDOS, retry=False)
     return _cliente
 
 
@@ -37,10 +48,14 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, api_key=None, limite=25)
     """
     Busca artigos no Semantic Scholar. Retorna (lista_normalizada, total_disponivel)
     ou levanta RuntimeError com mensagem clara em caso de erro.
+
+    Nunca itera além da primeira página de resultados (ver aviso no topo do
+    módulo sobre o retry interno da lib e o rate limit sem chave de API).
     """
     sch = _obter_cliente(api_key)
+    limite_pagina = min(limite, 100)
 
-    kwargs = {"limit": min(limite, 100)}
+    kwargs = {"limit": limite_pagina}
     if ano_inicio and ano_fim:
         kwargs["year"] = f"{ano_inicio}-{ano_fim}"
 
@@ -51,7 +66,7 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, api_key=None, limite=25)
 
     resultados = []
     try:
-        for paper in resultados_busca:
+        for paper in resultados_busca.items[:limite_pagina]:
             if len(resultados) >= limite:
                 break
             autores = "; ".join(a.name for a in (paper.authors or []) if a.name)
