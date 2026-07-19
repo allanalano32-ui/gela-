@@ -15,18 +15,15 @@ curto, e o limite é sempre travado a no máximo o tamanho de uma página (100,
 limite da própria API) para nunca precisar de uma segunda chamada HTTP.
 """
 
+import os
+
 from semanticscholar import SemanticScholar
 
 TIMEOUT_SEGUNDOS = 10
 
-_cliente = None
-
 
 def _obter_cliente(api_key=None):
-    global _cliente
-    if _cliente is None:
-        _cliente = SemanticScholar(api_key=api_key, timeout=TIMEOUT_SEGUNDOS, retry=False)
-    return _cliente
+    return SemanticScholar(api_key=api_key, timeout=TIMEOUT_SEGUNDOS, retry=False)
 
 
 def montar_query_booleana(termos_obrigatorios, termos_qualquer=None):
@@ -52,6 +49,9 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, api_key=None, limite=25)
     Nunca itera além da primeira página de resultados (ver aviso no topo do
     módulo sobre o retry interno da lib e o rate limit sem chave de API).
     """
+    if api_key is None:
+        api_key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY") or None
+
     sch = _obter_cliente(api_key)
     limite_pagina = min(limite, 100)
 
