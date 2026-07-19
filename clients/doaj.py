@@ -61,8 +61,6 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, page_size=25, max_result
         url = f"{BASE_URL}{query}"
         params = {"page": pagina, "pageSize": min(page_size, 100)}
         resp = requests.get(url, params=params, timeout=20)
-        print(f"[DOAJ DEBUG] status={resp.status_code} url={resp.url}")
-        print(f"[DOAJ DEBUG] corpo bruto (primeiros 500 chars): {resp.text[:500]}")
         if resp.status_code != 200:
             raise RuntimeError(
                 f"Erro na API do DOAJ ({resp.status_code}). Isso pode indicar "
@@ -73,9 +71,6 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, page_size=25, max_result
         data = resp.json()
         total = data.get("total", 0)
         registros = data.get("results", [])
-        print(f"[DOAJ DEBUG] total={total} page={data.get('page')} "
-              f"pageSize={data.get('pageSize')} len(results)={len(registros)} "
-              f"chaves_do_json={list(data.keys())}")
         if not registros:
             break
 
