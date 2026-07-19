@@ -18,6 +18,7 @@ limite da própria API) para nunca precisar de uma segunda chamada HTTP.
 import os
 
 from semanticscholar import SemanticScholar
+from tenacity import RetryError
 
 TIMEOUT_SEGUNDOS = 10
 
@@ -61,6 +62,15 @@ def buscar(query_string, ano_inicio=None, ano_fim=None, api_key=None, limite=25)
 
     try:
         resultados_busca = sch.search_paper(query_string, **kwargs)
+    except RetryError as e:
+        causa_original = e.last_attempt.exception() if e.last_attempt else None
+        if isinstance(causa_original, ConnectionRefusedError):
+            raise RuntimeError(
+                "Erro ao consultar o Semantic Scholar: limite de taxa (HTTP 429) "
+                "atingido. Sem uma chave de API dedicada, isso é esperado com "
+                "frequência - configure SEMANTIC_SCHOLAR_API_KEY para reduzir."
+            )
+        raise RuntimeError(f"Erro ao consultar o Semantic Scholar: {causa_original or e}")
     except Exception as e:
         raise RuntimeError(f"Erro ao consultar o Semantic Scholar: {e}")
 
