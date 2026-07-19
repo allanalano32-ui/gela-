@@ -10,9 +10,11 @@ import io
 import docx
 import pdfplumber
 
-# Cabeçalhos comuns de seção de referências em trabalhos acadêmicos em português
+# Cabeçalhos comuns de seção de referências em trabalhos acadêmicos em português.
+# Aceita uma nota entre parênteses opcional depois (ex: "REFERÊNCIAS (ABNT NBR 6023:2018)"),
+# que é comum quando o autor anota o padrão normativo usado.
 PADROES_CABECALHO_REFERENCIAS = re.compile(
-    r"^\s*(refer[êe]ncias(\s+bibliogr[áa]ficas)?|bibliografia)\s*$",
+    r"^\s*(refer[êe]ncias(\s+bibliogr[áa]ficas)?|bibliografia)\s*(\([^)]*\))?\s*$",
     re.IGNORECASE,
 )
 

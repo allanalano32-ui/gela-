@@ -49,6 +49,20 @@ assert encontrou2 is False
 assert referencias2 == []
 print("[OK] Documento sem cabeçalho de referências tratado corretamente (não inventa referências).")
 
+# 4b. Testar cabeçalho com nota entre parênteses (caso real que já falhou em produção:
+# "REFERÊNCIAS (ABNT NBR 6023:2018)")
+doc2b = docx_lib.Document()
+doc2b.add_paragraph("Texto do corpo.")
+doc2b.add_paragraph("REFERÊNCIAS (ABNT NBR 6023:2018)")
+doc2b.add_paragraph("SILVA, J. Título do trabalho. Revista X, 2022.")
+buffer2b = io.BytesIO()
+doc2b.save(buffer2b)
+linhas2b = extrair_texto("com_nota.docx", buffer2b.getvalue())
+corpo2b, referencias2b, encontrou2b = separar_corpo_e_referencias(linhas2b, linhas_sao_paragrafos=True)
+assert encontrou2b is True, "Cabeçalho com nota entre parênteses deveria ser reconhecido"
+assert len(referencias2b) == 1
+print("[OK] Cabeçalho 'REFERÊNCIAS (nota entre parênteses)' reconhecido corretamente (regressão corrigida).")
+
 # 5. Testar extensão não suportada
 try:
     extrair_texto("arquivo.txt", b"qualquer coisa")
