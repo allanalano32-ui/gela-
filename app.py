@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 
 import database as db
 import export as exp
-from clients import openalex, scielo, philpapers, bvs, google_scholar
+from clients import openalex, scielo, philpapers, bvs, google_scholar, doaj, semantic_scholar
+from dedupe_avancado import encontrar_duplicatas_avancadas
 from revisao.extrair_texto import extrair_texto, separar_corpo_e_referencias, extrair_paragrafos_com_formatacao
 from revisao.verificar_referencias import verificar_lista_referencias
 from correcao.abnt import verificar_lista_referencias_abnt
@@ -70,12 +71,15 @@ def api_buscar():
     query_pp = philpapers.montar_query_booleana(termos_obrigatorios, termos_qualquer)
     query_bvs = bvs.montar_query_booleana(termos_obrigatorios, termos_qualquer)
     query_gs = google_scholar.montar_query_booleana(termos_obrigatorios, termos_qualquer)
+    query_doaj = doaj.montar_query_booleana(termos_obrigatorios, termos_qualquer)
+    query_s2 = semantic_scholar.montar_query_booleana(termos_obrigatorios, termos_qualquer)
 
     busca_id = db.criar_busca(
         termo_busca=" ".join(termos_obrigatorios),
         ano_inicio=ano_inicio, ano_fim=ano_fim,
         string_openalex=query_oa, string_scielo=query_sc, string_philpapers=query_pp,
         string_bvs=query_bvs, string_google_scholar=query_gs,
+        string_doaj=query_doaj, string_semantic_scholar=query_s2,
     )
 
     avisos = []
@@ -120,7 +124,34 @@ def api_buscar():
             "completo e as opções de próximo passo)."
         )
 
+    try:
+        res_doaj, total_doaj = doaj.buscar(query_doaj, ano_inicio, ano_fim)
+        todos_artigos += res_doaj
+    except Exception as e:
+        avisos.append(f"DOAJ: {e}")
+        total_doaj = 0
+
+    try:
+        res_s2, total_s2 = semantic_scholar.buscar(query_s2, ano_inicio, ano_fim)
+        todos_artigos += res_s2
+    except Exception as e:
+        avisos.append(f"Semantic Scholar: {e}")
+        total_s2 = 0
+
     resumo_dedup = db.salvar_artigos(busca_id, todos_artigos)
+
+    try:
+        pares_duplicatas = encontrar_duplicatas_avancadas(todos_artigos)
+        extras_marcadas = db.marcar_duplicatas_adicionais(pares_duplicatas)
+        if extras_marcadas:
+            avisos.append(
+                f"A deduplicação avançada (bib-dedupe) encontrou {extras_marcadas} "
+                f"duplicata(s) adicional(is) que não tinham o mesmo DOI exato "
+                f"(ex: DOI com erro de digitação, ou mesma obra indexada diferente "
+                f"em fontes diferentes)."
+            )
+    except Exception as e:
+        avisos.append(f"Deduplicação avançada: {e}")
 
     return jsonify({
         "busca_id": busca_id,
@@ -130,6 +161,8 @@ def api_buscar():
             "philpapers": total_pp,
             "bvs": total_bvs,
             "google_scholar": total_gs,
+            "doaj": total_doaj,
+            "semantic_scholar": total_s2,
         },
         "strings_busca": {
             "openalex": query_oa,
@@ -137,6 +170,8 @@ def api_buscar():
             "philpapers": query_pp,
             "bvs": query_bvs,
             "google_scholar": query_gs,
+            "doaj": query_doaj,
+            "semantic_scholar": query_s2,
         },
         "resumo_dedup": resumo_dedup,
         "avisos": avisos,

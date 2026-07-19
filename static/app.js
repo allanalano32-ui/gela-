@@ -1,6 +1,7 @@
 const NOMES_FONTE = {
   openalex: "OpenAlex", scielo: "SciELO", philpapers: "PhilPapers",
   bvs: "BVS / LILACS", google_scholar: "Google Scholar",
+  doaj: "DOAJ", semantic_scholar: "Semantic Scholar",
 };
 
 document.getElementById("btn-buscar").addEventListener("click", buscar);
@@ -53,6 +54,8 @@ function mostrarStringsBusca(dados) {
   document.getElementById("str-sc").textContent = dados.strings_busca.scielo;
   document.getElementById("str-bvs").textContent = dados.strings_busca.bvs;
   document.getElementById("str-gs").textContent = dados.strings_busca.google_scholar;
+  document.getElementById("str-doaj").textContent = dados.strings_busca.doaj;
+  document.getElementById("str-s2").textContent = dados.strings_busca.semantic_scholar;
   document.getElementById("str-pp").textContent = dados.strings_busca.philpapers;
 }
 
@@ -79,7 +82,7 @@ async function carregarArtigos(buscaId) {
   const container = document.getElementById("resultados");
   container.innerHTML = "";
 
-  for (const fonte of ["openalex", "scielo", "bvs", "google_scholar", "philpapers"]) {
+  for (const fonte of ["openalex", "scielo", "doaj", "semantic_scholar", "bvs", "google_scholar", "philpapers"]) {
     const lista = porFonte[fonte] || [];
     const bloco = document.createElement("div");
     bloco.className = "fonte-bloco";

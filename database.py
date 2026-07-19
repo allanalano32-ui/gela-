@@ -29,11 +29,15 @@ CREATE TABLE IF NOT EXISTS buscas (
     string_philpapers TEXT,
     string_bvs TEXT,
     string_google_scholar TEXT,
+    string_doaj TEXT,
+    string_semantic_scholar TEXT,
     data_execucao TIMESTAMPTZ DEFAULT now()
 );
 
 ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_bvs TEXT;
 ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_google_scholar TEXT;
+ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_doaj TEXT;
+ALTER TABLE buscas ADD COLUMN IF NOT EXISTS string_semantic_scholar TEXT;
 
 CREATE TABLE IF NOT EXISTS artigos (
     id TEXT PRIMARY KEY,           -- identificador único: doi normalizado OU id nativo da fonte
@@ -102,15 +106,18 @@ def _cursor(conn):
 
 
 def criar_busca(termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo, string_philpapers,
-                 string_bvs=None, string_google_scholar=None):
+                 string_bvs=None, string_google_scholar=None,
+                 string_doaj=None, string_semantic_scholar=None):
     with get_conn() as conn:
         with _cursor(conn) as cur:
             cur.execute(
                 """INSERT INTO buscas (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo,
-                                        string_philpapers, string_bvs, string_google_scholar)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                                        string_philpapers, string_bvs, string_google_scholar,
+                                        string_doaj, string_semantic_scholar)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
                 (termo_busca, ano_inicio, ano_fim, string_openalex, string_scielo,
-                 string_philpapers, string_bvs, string_google_scholar),
+                 string_philpapers, string_bvs, string_google_scholar,
+                 string_doaj, string_semantic_scholar),
             )
             return cur.fetchone()["id"]
 
@@ -158,6 +165,42 @@ def salvar_artigos(busca_id, artigos):
                     ),
                 )
     return resumo
+
+
+def marcar_duplicatas_adicionais(pares_duplicatas):
+    """
+    Recebe uma lista de pares (id_artigo_1, id_artigo_2) encontrados pela
+    deduplicação avançada (bib-dedupe) e marca duplicata_de para os artigos
+    que ainda não tinham sido marcados como duplicata pela dedup simples por
+    DOI. Nunca desfaz uma marcação já existente - só preenche o que estava
+    NULL. Retorna o número de artigos marcados como duplicata adicional.
+    """
+    if not pares_duplicatas:
+        return 0
+
+    marcados = 0
+    with get_conn() as conn:
+        with _cursor(conn) as cur:
+            for id_1, id_2 in pares_duplicatas:
+                cur.execute(
+                    "SELECT id, duplicata_de FROM artigos WHERE id IN (%s, %s)",
+                    (id_1, id_2),
+                )
+                linhas = {r["id"]: r["duplicata_de"] for r in cur.fetchall()}
+                if id_1 not in linhas or id_2 not in linhas:
+                    continue
+
+                if linhas[id_1] is not None or linhas[id_2] is not None:
+                    continue
+
+                cur.execute(
+                    "UPDATE artigos SET duplicata_de = %s WHERE id = %s AND duplicata_de IS NULL",
+                    (id_1, id_2),
+                )
+                if cur.rowcount:
+                    marcados += cur.rowcount
+
+    return marcados
 
 
 def listar_artigos_por_busca(busca_id):
