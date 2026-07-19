@@ -12,10 +12,21 @@ diferentes por fontes diferentes, ou artigos sem DOI.
 Regra de ouro mantida: isso não decide sozinho - marca pares como "possível
 duplicata" para revisão, usando um algoritmo transparente e reproduzível
 (mesmo algoritmo usado por ferramentas de revisão sistemática como o CoLRev).
+
+Testado ao vivo em produção: prep()/block() usam multiprocessing.Pool()
+internamente por padrão (cpu=-1), que tenta criar recursos de IPC (semáforos
+POSIX, possivelmente via /dev/shm) indisponíveis no sistema de arquivos
+somente-leitura de uma função serverless do Vercel - isso derrubava a chamada
+com "[Errno 2] No such file or directory" antes mesmo de rodar a lógica de
+deduplicação em si. Por isso cpu=1 é passado explicitamente em todas as
+chamadas, forçando execução single-process (mais lenta para buscas muito
+grandes, mas sem depender de IPC do sistema operacional).
 """
 
 import pandas as pd
 from bib_dedupe.bib_dedupe import prep, block, match
+
+CPU = 1  # ver aviso acima sobre multiprocessing indisponível no Vercel
 
 
 def encontrar_duplicatas_avancadas(artigos):
@@ -45,12 +56,12 @@ def encontrar_duplicatas_avancadas(artigos):
     df = pd.DataFrame(linhas)
 
     try:
-        preparado = prep(df)
-        blocado = block(preparado)
+        preparado = prep(df, cpu=CPU)
+        blocado = block(preparado, cpu=CPU)
         se_encontrou_pares = len(blocado) > 0
         if not se_encontrou_pares:
             return []
-        combinado = match(blocado)
+        combinado = match(blocado, cpu=CPU)
     except Exception as e:
         raise RuntimeError(f"Erro ao rodar a deduplicação avançada (bib-dedupe): {e}")
 
